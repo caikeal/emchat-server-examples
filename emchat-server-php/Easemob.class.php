@@ -206,6 +206,47 @@ class Easemob {
 		$result = $this->postCurl ( $url, $option, $header );
 		return $result;
 	}
+	/*
+	 * 上传图片
+	 * @param string $img 图片地址
+	 */
+	public function upload($img){
+		$option['file']= file_get_contents($img);
+		$url= $this->url . "chatfiles";
+		$access_token = $this->getToken ();
+		$header [] = 'Authorization: Bearer ' . $access_token;
+		$header [] = 'restrict-access:true';
+		$result=$this->postCurl ( $url, $option, $header,'POST',0 );
+
+		$data=json_decode($result,true);
+		$re['uuid']=$data['entities'][0]['uuid'];
+		$re['secret']=$data['entities'][0]['share-secret'];
+		return $re;
+	}
+	/*
+	 * 发送图片消息
+	 * @param array $size
+	 *              array（ width，height）
+	 * @param array $username
+	 *        	array('1','2')
+	 */
+	public function img_hxSend($from_user = "admin", $username, $url, $secret,$size, $target_type = "users", $ext){
+		$option ['target_type'] = $target_type;
+		$option ['target'] = $username;
+		$params ['type'] = "img";
+		$params ['url'] = $url;
+		$params ['filename'] = time().".jpg";
+		$params ['secret'] = $secret;
+		$params ['size'] = $size;
+		$option ['msg'] = $params;
+		$option ['from'] = $from_user;
+		$option ['ext'] = $ext;
+		$url = $this->url . "messages";
+		$access_token = $this->getToken ();
+		$header [] = 'Authorization: Bearer ' . $access_token;
+		$result = $this->postCurl ( $url, $option, $header );
+		return $result;
+	}
 	/**
 	 * 获取app中所有的群组
 	 */
@@ -361,16 +402,21 @@ class Easemob {
 	
 	/**
 	 * CURL Post
+	 * $stype=1默认常规编码，$stype=0为multipart/form-data编码
 	 */
-	private function postCurl($url, $option, $header = 0, $type = 'POST') {
+	private function postCurl($url, $option, $header = 0, $type = 'POST',$stype=1) {
 		$curl = curl_init (); // 启动一个CURL会话
 		curl_setopt ( $curl, CURLOPT_URL, $url ); // 要访问的地址
 		curl_setopt ( $curl, CURLOPT_SSL_VERIFYPEER, FALSE ); // 对认证证书来源的检查
 		curl_setopt ( $curl, CURLOPT_SSL_VERIFYHOST, FALSE ); // 从证书中检查SSL加密算法是否存在
 		curl_setopt ( $curl, CURLOPT_USERAGENT, 'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)' ); // 模拟用户使用的浏览器
 		if (! empty ( $option )) {
-			$options = json_encode ( $option );
-			curl_setopt ( $curl, CURLOPT_POSTFIELDS, $options ); // Post提交的数据包
+			if($stype==1) {
+				$options = json_encode($option);
+				curl_setopt($curl, CURLOPT_POSTFIELDS, $options); // Post提交的数据包
+			}else{
+				curl_setopt($curl, CURLOPT_POSTFIELDS, $option); // Post提交的数据包
+			}
 		}
 		curl_setopt ( $curl, CURLOPT_TIMEOUT, 30 ); // 设置超时限制防止死循环
 		curl_setopt ( $curl, CURLOPT_HTTPHEADER, $header ); // 设置HTTP头
